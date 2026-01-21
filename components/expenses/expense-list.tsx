@@ -40,59 +40,67 @@ export function ExpenseList({ expenses, categories }: ExpenseListProps) {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
+    <Card className="rounded-xl shadow-md">
+      <CardHeader className="pb-4">
+        <div className="flex items-center justify-between gap-4">
           <div>
-            <CardTitle>Expenses</CardTitle>
-            <CardDescription>Your expense history</CardDescription>
+            <CardTitle className="text-xl">Expenses</CardTitle>
+            <CardDescription className="text-base">Your expense history</CardDescription>
           </div>
           <AddExpenseDialog categories={categories}>
-            <Button>Add Expense</Button>
+            <Button size="default">Add Expense</Button>
           </AddExpenseDialog>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-4">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Date</TableHead>
+              <TableHead className="w-[140px]">Date</TableHead>
               <TableHead>Description</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead className="text-right">Amount</TableHead>
-              <TableHead className="w-[50px]" />
+              <TableHead className="w-[160px]">Category</TableHead>
+              <TableHead className="w-[120px] text-right">Amount</TableHead>
+              <TableHead className="w-[60px]" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {expenses.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground">
-                  No expenses yet. Add your first expense!
+                <TableCell colSpan={5}>
+                  <div className="flex min-h-40 items-center justify-center text-muted-foreground">
+                    <p className="text-base">No expenses yet. Add your first expense!</p>
+                  </div>
                 </TableCell>
               </TableRow>
             ) : (
               expenses.map((expense) => (
                 <TableRow key={expense.id}>
-                  <TableCell>
+                  <TableCell className="font-medium">
                     {new Date(expense.date).toLocaleDateString()}
                   </TableCell>
                   <TableCell>{expense.description}</TableCell>
                   <TableCell>
                     {expense.category ? (
-                      <Badge style={{ backgroundColor: expense.category.color }}>
+                      <Badge
+                        style={{ backgroundColor: expense.category.color }}
+                        className="rounded-md px-2.5 py-1 text-sm font-medium text-white"
+                      >
                         {expense.category.name}
                       </Badge>
                     ) : (
-                      <Badge variant="outline">Uncategorized</Badge>
+                      <Badge variant="outline" className="rounded-md px-2.5 py-1 text-sm">
+                        Uncategorized
+                      </Badge>
                     )}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right font-semibold">
                     ${parseFloat(expense.amount).toFixed(2)}
                   </TableCell>
                   <TableCell>
                     <Button
                       variant="ghost"
-                      size="sm"
+                      size="icon"
+                      className="h-9 w-9 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                       onClick={() => handleDelete(expense.id)}
                     >
                       <Trash2 className="h-4 w-4" />

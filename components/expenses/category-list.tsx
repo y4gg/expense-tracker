@@ -29,35 +29,40 @@ export function CategoryList({ categories }: CategoryListProps) {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
+    <Card className="rounded-xl shadow-md">
+      <CardHeader className="pb-4">
+        <div className="flex items-center justify-between gap-4">
           <div>
-            <CardTitle>Categories</CardTitle>
-            <CardDescription>Manage your expense categories</CardDescription>
+            <CardTitle className="text-xl">Categories</CardTitle>
+            <CardDescription className="text-base">Manage your expense categories</CardDescription>
           </div>
           <AddCategoryDialog>
-            <Button size="sm">Add Category</Button>
+            <Button size="default">Add Category</Button>
           </AddCategoryDialog>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="flex flex-wrap gap-2">
+      <CardContent className="pt-4">
+        <div className="flex flex-wrap gap-3">
           {categories.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No categories yet</p>
+            <div className="flex min-h-32 items-center justify-center text-center text-muted-foreground">
+              <p className="text-base">No categories yet</p>
+            </div>
           ) : (
             categories.map((category) => (
-              <div key={category.id} className="flex items-center gap-1">
-                <Badge style={{ backgroundColor: category.color }} className="text-white">
+              <div key={category.id} className="group flex items-center gap-2">
+                <Badge
+                  style={{ backgroundColor: category.color }}
+                  className="rounded-lg px-3 py-1.5 text-sm font-medium text-white transition-opacity group-hover:opacity-80"
+                >
                   {category.name}
                 </Badge>
                 <Button
                   variant="ghost"
-                  size="sm"
-                  className="h-6 w-6 p-0 hover:bg-transparent"
+                  size="icon"
+                  className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                   onClick={() => handleDelete(category.id)}
                 >
-                  <Trash2 className="h-3 w-3" />
+                  <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
             ))
