@@ -13,7 +13,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { createCategory } from "@/actions/expenses";
+import { trpc } from "@/trpc/react";
 import { toast } from "sonner";
 
 interface AddCategoryDialogProps {
@@ -26,16 +26,22 @@ export function AddCategoryDialog({ children }: AddCategoryDialogProps) {
   const [color, setColor] = useState("#3b82f6");
   const [loading, setLoading] = useState(false);
 
+  const createMutation = trpc.categories.create.useMutation({
+    onSuccess: () => {
+      toast.success("Category created successfully");
+      utils.categories.invalidate();
+      setName("");
+      setColor("#3b82f6");
+      setOpen(false);
+    },
+  });
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      await createCategory({ name, color });
-      toast.success("Category created successfully");
-      setName("");
-      setColor("#3b82f6");
-      setOpen(false);
+      await createMutation.mutate({ name, color });
     } catch {
       toast.error("Failed to create category");
     } finally {
@@ -68,6 +74,7 @@ export function AddCategoryDialog({ children }: AddCategoryDialogProps) {
               <Label htmlFor="name">Name</Label>
               <Input
                 id="name"
+                type="text"
                 placeholder="Food"
                 value={name}
                 onChange={(e) => setName(e.target.value)}

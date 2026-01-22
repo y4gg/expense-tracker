@@ -1,11 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AddCategoryDialog } from "./add-category-dialog";
-import { deleteCategory } from "@/actions/expenses";
-import { toast } from "sonner";
+import { trpc } from "@/trpc/react";
 import { Trash2 } from "lucide-react";
 
 interface Category {
@@ -19,23 +19,18 @@ interface CategoryListProps {
 }
 
 export function CategoryList({ categories }: CategoryListProps) {
-  const handleDelete = async (id: string) => {
-    try {
-      await deleteCategory(id);
+  const deleteMutation = trpc.categories.delete.useMutation({
+    onSuccess: () => {
       toast.success("Category deleted successfully");
-    } catch {
-      toast.error("Failed to delete category");
-    }
-  };
+      utils.categories.invalidate();
+    },
+  });
 
   return (
     <Card className="rounded-xl shadow-md">
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between gap-4">
-          <div>
-            <CardTitle className="text-xl">Categories</CardTitle>
-            <CardDescription className="text-base">Manage your expense categories</CardDescription>
-          </div>
+          <CardTitle className="text-xl">Categories</CardTitle>
           <AddCategoryDialog>
             <Button size="default">Add Category</Button>
           </AddCategoryDialog>
@@ -60,7 +55,8 @@ export function CategoryList({ categories }: CategoryListProps) {
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                  onClick={() => handleDelete(category.id)}
+                  onClick={() => deleteMutation.mutate({ id: category.id })}
+                  disabled={deleteMutation.isPending}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>

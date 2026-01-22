@@ -11,7 +11,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { authClient } from "@/lib/auth-client";
-import { User, Settings, LogOut, UserCog } from "lucide-react";
+import { User, LogOut, UserCog } from "lucide-react";
 
 interface UserDropdownProps {
   userName: string;
@@ -50,12 +50,6 @@ export function UserDropdown({ userName, userEmail }: UserDropdownProps) {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <a href="/dashboard/settings" className="cursor-pointer">
-            <Settings className="h-4 w-4 mr-2" />
-            Settings
-          </a>
-        </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <a href="/dashboard/account" className="cursor-pointer">
             <UserCog className="h-4 w-4 mr-2" />

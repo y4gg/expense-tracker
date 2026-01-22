@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { expense, category } from "@/db/schema";
 import { nanoid } from "nanoid";
@@ -177,7 +177,7 @@ export const expensesRouter = t.router({
       const result = await db
         .select({
           type: expense.type,
-          total: expense.amount,
+          total: sql<number>`CAST(SUM(${expense.amount}) AS NUMERIC)`,
         })
         .from(expense)
         .where(eq(expense.userId, ctx.session.user.id))
