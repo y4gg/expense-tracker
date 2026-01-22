@@ -26,7 +26,6 @@ import { toast } from "sonner";
 interface RecurringFormData {
   amount: number;
   description: string;
-  date: Date;
   categoryId: string | undefined;
   type: "expense" | "income";
   frequency: "daily" | "every3days" | "weekly" | "biweekly" | "monthly" | "quarterly" | "yearly";
@@ -51,7 +50,6 @@ export function AddRecurringDialog({ children }: AddRecurringDialogProps) {
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
-  const [date, setDate] = useState("");
   const [categoryId, setCategoryId] = useState<string | undefined>(undefined);
   const [type, setType] = useState<"expense" | "income">("expense");
   const [frequency, setFrequency] = useState<"daily" | "every3days" | "weekly" | "biweekly" | "monthly" | "quarterly" | "yearly">("monthly");
@@ -69,7 +67,6 @@ export function AddRecurringDialog({ children }: AddRecurringDialogProps) {
       setOpen(false);
       setAmount("");
       setDescription("");
-      setDate("");
       setCategoryId(undefined);
       setType("expense");
       setFrequency("monthly");
@@ -112,7 +109,6 @@ export function AddRecurringDialog({ children }: AddRecurringDialogProps) {
       const data: RecurringFormData = {
         amount: parseFloat(amount),
         description,
-        date: new Date(),
         categoryId,
         type,
         frequency,
@@ -128,7 +124,7 @@ export function AddRecurringDialog({ children }: AddRecurringDialogProps) {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>{children}</SheetTrigger>
-      <SheetContent>
+      <SheetContent className="px-4">
         <form onSubmit={handleSubmit}>
           <SheetHeader>
             <SheetTitle>Add Recurring Transaction</SheetTitle>
@@ -177,16 +173,6 @@ export function AddRecurringDialog({ children }: AddRecurringDialogProps) {
                 placeholder="Rent, Netflix subscription, etc."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="date">Date</Label>
-              <Input
-                id="date"
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
                 required
               />
             </div>
