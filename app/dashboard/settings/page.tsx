@@ -9,7 +9,7 @@ export default function SettingsPage() {
     <>
       <div className="mb-8">
         <h1 className="text-4xl font-bold tracking-tight">Settings</h1>
-        <p className="mt-2 text-lg text-muted-foreground">Manage your account and preferences</p>
+        <p className="mt-2 text-lg text-muted-foreground">Manage your application preferences</p>
       </div>
 
       <div className="space-y-6">
