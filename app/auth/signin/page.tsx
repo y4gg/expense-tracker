@@ -13,11 +13,6 @@ export default function SignInPage() {
               Sign up
             </Link>
           </p>
-          <p className="mt-2">
-            <Link href="/dashboard" className="text-muted-foreground hover:underline">
-              Go to dashboard
-            </Link>
-          </p>
         </div>
       </div>
     </div>

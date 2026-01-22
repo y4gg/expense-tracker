@@ -1,8 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { RecurringList } from "@/components/recurring/recurring-list";
-import { AddRecurringDialog } from "@/components/recurring/add-recurring-dialog";
 
 export default function SettingsPage() {
   return (
@@ -33,24 +31,7 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        <Card className="rounded-xl shadow-md">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Recurring Transactions</CardTitle>
-                <CardDescription>
-                  Manage your recurring transactions
-                </CardDescription>
-              </div>
-              <AddRecurringDialog>
-                <Button size="default">Add Recurring</Button>
-              </AddRecurringDialog>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <RecurringList />
-          </CardContent>
-        </Card>
+        <RecurringList />
       </div>
     </>
   );

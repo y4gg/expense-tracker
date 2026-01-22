@@ -16,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Expense Tracker",
-  description: "Track your expenses with categories and filters",
+  title: "Expense Tracker - Track Your Finances",
+  description: "Simple and powerful expense tracking with categories, filters, and financial insights. Take control of your spending today.",
 };
 
 export default function RootLayout({
