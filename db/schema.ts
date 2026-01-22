@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { pgTable, text, timestamp, boolean, index, numeric } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, index, numeric, pgEnum } from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -73,6 +73,8 @@ export const verification = pgTable(
   (table) => [index("verification_identifier_idx").on(table.identifier)],
 );
 
+export const transactionType = pgEnum("transaction_type", ["expense", "income"]);
+
 export const category = pgTable(
   "category",
   {
@@ -98,6 +100,7 @@ export const expense = pgTable(
     description: text("description").notNull(),
     date: timestamp("date").notNull(),
     categoryId: text("category_id").references(() => category.id, { onDelete: "set null" }),
+    type: transactionType("type").notNull().default("expense"),
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
@@ -109,6 +112,7 @@ export const expense = pgTable(
   (table) => [
     index("expense_userId_idx").on(table.userId),
     index("expense_categoryId_idx").on(table.categoryId),
+    index("expense_type_idx").on(table.type),
   ],
 );
 

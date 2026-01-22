@@ -8,6 +8,13 @@
       "when": 1769035761208,
       "tag": "0000_amazing_marauders",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1769041030030,
+      "tag": "0001_material_squadron_sinister",
+      "breakpoints": true
     }
   ]
 }

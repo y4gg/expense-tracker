@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { db } from "@/db";
 import { category, expense } from "@/db/schema";
 import { auth } from "@/lib/auth";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 export async function getCategories() {
@@ -59,7 +59,7 @@ export async function deleteCategory(id: string) {
   return { success: true };
 }
 
-export async function getExpenses(categoryId?: string) {
+export async function getExpenses(categoryId?: string, type?: "expense" | "income") {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) {
     return [];
@@ -71,6 +71,10 @@ export async function getExpenses(categoryId?: string) {
     conditions.push(eq(expense.categoryId, categoryId));
   }
 
+  if (type) {
+    conditions.push(eq(expense.type, type));
+  }
+
   const expenses = await db
     .select({
       id: expense.id,
@@ -78,6 +82,7 @@ export async function getExpenses(categoryId?: string) {
       description: expense.description,
       date: expense.date,
       categoryId: expense.categoryId,
+      type: expense.type,
       category: {
         id: category.id,
         name: category.name,
@@ -97,6 +102,7 @@ export async function createExpense(data: {
   description: string;
   date: Date;
   categoryId?: string;
+  type?: "expense" | "income";
 }) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) {
@@ -109,6 +115,7 @@ export async function createExpense(data: {
     description: data.description,
     date: data.date,
     categoryId: data.categoryId || null,
+    type: data.type || "expense",
     userId: session.user.id,
   });
 
@@ -120,6 +127,7 @@ export async function updateExpense(id: string, data: {
   description: string;
   date: Date;
   categoryId?: string;
+  type?: "expense" | "income";
 }) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) {
@@ -143,6 +151,7 @@ export async function updateExpense(id: string, data: {
       description: data.description,
       date: data.date,
       categoryId: data.categoryId || null,
+      type: data.type || existing[0].type,
     })
     .where(eq(expense.id, id));
 
@@ -168,4 +177,36 @@ export async function deleteExpense(id: string) {
   await db.delete(expense).where(eq(expense.id, id));
 
   return { success: true };
+}
+
+export async function getFinancialSummary() {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) {
+    return {
+      totalIncome: 0,
+      totalExpenses: 0,
+      netBalance: 0,
+    };
+  }
+
+  const result = await db
+    .select({
+      type: expense.type,
+      total: sql<number>`CAST(SUM(CAST(${expense.amount} AS NUMERIC)) AS NUMERIC)`,
+    })
+    .from(expense)
+    .where(eq(expense.userId, session.user.id))
+    .groupBy(expense.type);
+
+  const incomeEntry = result.find((r) => r.type === "income");
+  const expenseEntry = result.find((r) => r.type === "expense");
+
+  const totalIncome = incomeEntry?.total ? parseFloat(incomeEntry.total.toString()) : 0;
+  const totalExpenses = expenseEntry?.total ? parseFloat(expenseEntry.total.toString()) : 0;
+
+  return {
+    totalIncome,
+    totalExpenses,
+    netBalance: totalIncome - totalExpenses,
+  };
 }

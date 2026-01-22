@@ -34,6 +34,7 @@ interface ExpenseFormData {
   description: string;
   date: Date;
   categoryId?: string;
+  type?: "expense" | "income";
 }
 
 interface AddExpenseDialogProps {
@@ -44,6 +45,7 @@ interface AddExpenseDialogProps {
     description: string;
     date: Date;
     categoryId?: string | null;
+    type?: "expense" | "income";
   };
   children: React.ReactNode;
 }
@@ -54,6 +56,7 @@ export function AddExpenseDialog({ categories, expense, children }: AddExpenseDi
   const [description, setDescription] = useState("");
   const [date, setDate] = useState("");
   const [categoryId, setCategoryId] = useState<string | undefined>(undefined);
+  const [type, setType] = useState<"expense" | "income">("expense");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -62,11 +65,13 @@ export function AddExpenseDialog({ categories, expense, children }: AddExpenseDi
       setDescription(expense.description);
       setDate(new Date(expense.date).toISOString().split("T")[0]);
       setCategoryId(expense.categoryId || undefined);
+      setType(expense.type || "expense");
     } else {
       setAmount("");
       setDescription("");
       setDate(new Date().toISOString().split("T")[0]);
       setCategoryId(undefined);
+      setType("expense");
     }
   }, [expense, open]);
 
@@ -80,26 +85,38 @@ export function AddExpenseDialog({ categories, expense, children }: AddExpenseDi
         description,
         date: new Date(date),
         categoryId,
+        type,
       };
 
       if (expense) {
         await updateExpense(expense.id, data);
-        toast.success("Expense updated successfully");
+        toast.success("Transaction updated successfully");
       } else {
         await createExpense(data);
-        toast.success("Expense created successfully");
+        toast.success("Transaction created successfully");
       }
 
       setAmount("");
       setDescription("");
       setDate(new Date().toISOString().split("T")[0]);
       setCategoryId(undefined);
+      setType("expense");
       setOpen(false);
     } catch {
-      toast.error("Failed to save expense");
+      toast.error("Failed to save transaction");
     } finally {
       setLoading(false);
     }
+  };
+
+  const getDialogTitle = () => {
+    if (expense) return type === "income" ? "Edit Income" : "Edit Expense";
+    return type === "income" ? "Add Income" : "Add Expense";
+  };
+
+  const getDialogDescription = () => {
+    if (expense) return "Update your transaction details";
+    return type === "income" ? "Add a new income to track" : "Add a new expense to track";
   };
 
   return (
@@ -108,12 +125,31 @@ export function AddExpenseDialog({ categories, expense, children }: AddExpenseDi
       <DialogContent className="sm:max-w-[425px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>{expense ? "Edit Expense" : "Add Expense"}</DialogTitle>
-            <DialogDescription>
-              {expense ? "Update your expense details" : "Add a new expense to track"}
-            </DialogDescription>
+            <DialogTitle>{getDialogTitle()}</DialogTitle>
+            <DialogDescription>{getDialogDescription()}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label>Type</Label>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant={type === "expense" ? "default" : "outline"}
+                  className="flex-1"
+                  onClick={() => setType("expense")}
+                >
+                  Expense
+                </Button>
+                <Button
+                  type="button"
+                  variant={type === "income" ? "default" : "outline"}
+                  className="flex-1"
+                  onClick={() => setType("income")}
+                >
+                  Income
+                </Button>
+              </div>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="amount">Amount</Label>
               <Input
