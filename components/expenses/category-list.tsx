@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AddCategoryDialog } from "./add-category-dialog";
 import { trpc } from "@/trpc/react";
 import { Trash2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface Category {
   id: string;
@@ -19,6 +19,8 @@ interface CategoryListProps {
 }
 
 export function CategoryList({ categories }: CategoryListProps) {
+  const utils = trpc.useUtils();
+
   const deleteMutation = trpc.categories.delete.useMutation({
     onSuccess: () => {
       toast.success("Category deleted successfully");

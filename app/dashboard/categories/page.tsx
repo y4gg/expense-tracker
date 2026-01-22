@@ -1,19 +1,12 @@
 "use client";
 
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { trpc } from "@/trpc/react";
 import { AddCategoryDialog } from "@/components/expenses/add-category-dialog";
 
 export default function CategoriesPage() {
-  const [open, setOpen] = useState(false);
   const { data: categories = [] } = trpc.categories.getAll.useQuery();
-  const createMutation = trpc.categories.create.useMutation({
-    onSuccess: () => {
-      setOpen(false);
-    },
-  });
 
   return (
     <>
