@@ -32,13 +32,13 @@ export default function CategoriesPage() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {categories.map((category) => (
-          <div key={category.id} className="rounded-xl border bg-card text-card-foreground shadow-md p-6">
-            <div className="flex items-center gap-4 mb-4">
+          <div key={category.id} className="rounded-lg border bg-card text-card-foreground shadow-md p-4">
+            <div className="flex items-center gap-2">
               <div
-                className="h-16 w-16 rounded-full"
+                className="h-14 w-14 rounded-full"
                 style={{ backgroundColor: category.color }}
               />
-              <h3 className="text-xl font-semibold">{category.name}</h3>
+              <h3 className="text-lg font-semibold">{category.name}</h3>
             </div>
           </div>
         ))}
