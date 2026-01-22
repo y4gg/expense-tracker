@@ -75,6 +75,8 @@ export const verification = pgTable(
 
 export const transactionType = pgEnum("transaction_type", ["expense", "income"]);
 
+export const frequencyType = pgEnum("frequency_type", ["daily", "every3days", "weekly", "biweekly", "monthly", "quarterly", "yearly"]);
+
 export const category = pgTable(
   "category",
   {
@@ -92,6 +94,33 @@ export const category = pgTable(
   (table) => [index("category_userId_idx").on(table.userId)],
 );
 
+export const recurringTransaction = pgTable(
+  "recurring_transaction",
+  {
+    id: text("id").primaryKey(),
+    amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
+    description: text("description").notNull(),
+    categoryId: text("category_id").references(() => category.id, { onDelete: "set null" }),
+    type: transactionType("type").notNull().default("expense"),
+    frequency: frequencyType("frequency").notNull(),
+    nextDueDate: timestamp("next_due_date").notNull(),
+    lastTriggeredDate: timestamp("last_triggered_date"),
+    isActive: boolean("is_active").notNull().default(true),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("recurring_transaction_userId_idx").on(table.userId),
+    index("recurring_transaction_nextDueDate_idx").on(table.nextDueDate),
+    index("recurring_transaction_isActive_idx").on(table.isActive),
+  ],
+);
+
 export const expense = pgTable(
   "expense",
   {
@@ -101,6 +130,7 @@ export const expense = pgTable(
     date: timestamp("date").notNull(),
     categoryId: text("category_id").references(() => category.id, { onDelete: "set null" }),
     type: transactionType("type").notNull().default("expense"),
+    recurringTransactionId: text("recurring_transaction_id").references(() => recurringTransaction.id, { onDelete: "set null" }),
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
@@ -113,6 +143,7 @@ export const expense = pgTable(
     index("expense_userId_idx").on(table.userId),
     index("expense_categoryId_idx").on(table.categoryId),
     index("expense_type_idx").on(table.type),
+    index("expense_recurringTransactionId_idx").on(table.recurringTransactionId),
   ],
 );
 
@@ -121,6 +152,7 @@ export const userRelations = relations(user, ({ many }) => ({
   accounts: many(account),
   categories: many(category),
   expenses: many(expense),
+  recurringTransactions: many(recurringTransaction),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -143,6 +175,19 @@ export const categoryRelations = relations(category, ({ one, many }) => ({
     references: [user.id],
   }),
   expenses: many(expense),
+  recurringTransactions: many(recurringTransaction),
+}));
+
+export const recurringTransactionRelations = relations(recurringTransaction, ({ one, many }) => ({
+  user: one(user, {
+    fields: [recurringTransaction.userId],
+    references: [user.id],
+  }),
+  category: one(category, {
+    fields: [recurringTransaction.categoryId],
+    references: [category.id],
+  }),
+  expenses: many(expense),
 }));
 
 export const expenseRelations = relations(expense, ({ one }) => ({
@@ -153,5 +198,9 @@ export const expenseRelations = relations(expense, ({ one }) => ({
   category: one(category, {
     fields: [expense.categoryId],
     references: [category.id],
+  }),
+  recurringTransaction: one(recurringTransaction, {
+    fields: [expense.recurringTransactionId],
+    references: [recurringTransaction.id],
   }),
 }));

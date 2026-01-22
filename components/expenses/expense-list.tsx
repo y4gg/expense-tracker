@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { AddExpenseDialog } from "./add-expense-dialog";
 import { trpc } from "@/trpc/react";
 import { toast } from "sonner";
-import { Trash2 } from "lucide-react";
+import { Trash2, RotateCw } from "lucide-react";
 
 type FilterType = "all" | "expense" | "income";
 
@@ -22,10 +22,6 @@ export function ExpenseList() {
     onSuccess: () => {
       toast.success("Transaction deleted successfully");
       utils.expenses.invalidate();
-      utils.categories.invalidate();
-    },
-    onError: () => {
-      toast.error("Failed to delete transaction");
     },
   });
 
@@ -101,13 +97,14 @@ export function ExpenseList() {
               <TableHead>Description</TableHead>
               <TableHead className="w-[160px]">Category</TableHead>
               <TableHead className="w-[120px] text-right">Amount</TableHead>
+              <TableHead className="w-[40px]" />
               <TableHead className="w-[60px]" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredExpenses.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5}>
+                <TableCell colSpan={6}>
                   <div className="flex min-h-40 items-center justify-center text-muted-foreground">
                     <p className="text-base">{getEmptyMessage()}</p>
                   </div>
@@ -136,6 +133,18 @@ export function ExpenseList() {
                   </TableCell>
                   <TableCell className={`text-right font-semibold ${expense.type === "income" ? "text-green-600 dark:text-green-500" : "text-red-600 dark:text-red-500"}`}>
                     {expense.type === "income" ? "+" : "-"}${parseFloat(expense.amount).toFixed(2)}
+                  </TableCell>
+                  <TableCell>
+                    {expense.recurringTransactionId && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 p-0 text-muted-foreground hover:text-primary"
+                        onClick={() => window.location.href = `/dashboard/settings`}
+                      >
+                        <RotateCw className="h-4 w-4" />
+                      </Button>
+                    )}
                   </TableCell>
                   <TableCell>
                     <Button

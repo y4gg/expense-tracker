@@ -37,6 +37,7 @@ export const expensesRouter = t.router({
           date: expense.date,
           categoryId: expense.categoryId,
           type: expense.type,
+          recurringTransactionId: expense.recurringTransactionId,
           category: {
             id: category.id,
             name: category.name,
@@ -58,10 +59,11 @@ export const expensesRouter = t.router({
     .input(
       z.object({
         amount: z.number().positive(),
-        description: z.string().min(1),
+        description: z.string().min(1).max(500),
         date: z.date(),
         categoryId: z.string().optional(),
         type: z.enum(["expense", "income"]).default("expense"),
+        recurringTransactionId: z.string().optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -72,28 +74,30 @@ export const expensesRouter = t.router({
         });
       }
 
-      const newExpense = await db.insert(expense).values({
+      await db.insert(expense).values({
         id: nanoid(),
         amount: input.amount.toString(),
         description: input.description,
         date: input.date,
         categoryId: input.categoryId || null,
         type: input.type,
+        recurringTransactionId: input.recurringTransactionId || null,
         userId: ctx.session.user.id,
       });
 
-      return newExpense;
+      return { success: true };
     }),
 
   update: t.procedure
     .input(
       z.object({
         id: z.string(),
-        amount: z.number().positive(),
-        description: z.string().min(1),
-        date: z.date(),
+        amount: z.number().positive().optional(),
+        description: z.string().min(1).max(500).optional(),
+        date: z.date().optional(),
         categoryId: z.string().optional(),
         type: z.enum(["expense", "income"]).optional(),
+        recurringTransactionId: z.string().optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -120,11 +124,12 @@ export const expensesRouter = t.router({
       await db
         .update(expense)
         .set({
-          amount: input.amount.toString(),
-          description: input.description,
-          date: input.date,
-          categoryId: input.categoryId || null,
+          amount: input.amount?.toString() || existing[0].amount,
+          description: input.description || existing[0].description,
+          date: input.date || existing[0].date,
+          categoryId: input.categoryId || existing[0].categoryId,
           type: input.type || existing[0].type,
+          recurringTransactionId: input.recurringTransactionId || existing[0].recurringTransactionId,
         })
         .where(eq(expense.id, input.id));
 
