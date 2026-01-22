@@ -6,44 +6,28 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { AddExpenseDialog } from "./add-expense-dialog";
-import { deleteExpense } from "@/actions/expenses";
+import { trpc } from "@/trpc/react";
 import { toast } from "sonner";
 import { Trash2 } from "lucide-react";
 
-interface Category {
-  id: string;
-  name: string;
-  color: string;
-}
-
-interface Expense {
-  id: string;
-  amount: string;
-  description: string;
-  date: Date;
-  categoryId: string | null;
-  type: "expense" | "income";
-  category: Category | null;
-}
-
-interface ExpenseListProps {
-  expenses: Expense[];
-  categories: Category[];
-}
-
 type FilterType = "all" | "expense" | "income";
 
-export function ExpenseList({ expenses, categories }: ExpenseListProps) {
+export function ExpenseList() {
   const [filter, setFilter] = React.useState<FilterType>("all");
+  const utils = trpc.useUtils();
 
-  const handleDelete = async (id: string) => {
-    try {
-      await deleteExpense(id);
+  const { data: expenses = [] } = trpc.expenses.getAll.useQuery();
+
+  const deleteMutation = trpc.expenses.delete.useMutation({
+    onSuccess: () => {
       toast.success("Transaction deleted successfully");
-    } catch {
+      utils.expenses.invalidate();
+      utils.categories.invalidate();
+    },
+    onError: () => {
       toast.error("Failed to delete transaction");
-    }
-  };
+    },
+  });
 
   const filteredExpenses = expenses.filter((expense) => {
     if (filter === "all") return true;
@@ -103,7 +87,7 @@ export function ExpenseList({ expenses, categories }: ExpenseListProps) {
                 Income
               </Button>
             </div>
-            <AddExpenseDialog categories={categories}>
+            <AddExpenseDialog>
               <Button size="default">Add</Button>
             </AddExpenseDialog>
           </div>
@@ -158,7 +142,8 @@ export function ExpenseList({ expenses, categories }: ExpenseListProps) {
                       variant="ghost"
                       size="icon"
                       className="h-9 w-9 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                      onClick={() => handleDelete(expense.id)}
+                      onClick={() => deleteMutation.mutate({ id: expense.id })}
+                      disabled={deleteMutation.isPending}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>

@@ -94,7 +94,10 @@ export async function getExpenses(categoryId?: string, type?: "expense" | "incom
     .where(and(...conditions))
     .orderBy(desc(expense.date));
 
-  return expenses;
+  return expenses.map((expense) => ({
+    ...expense,
+    date: expense.date.toISOString(),
+  }));
 }
 
 export async function createExpense(data: {
