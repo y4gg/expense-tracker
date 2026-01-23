@@ -1,6 +1,6 @@
-"use client"; 
+"use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +22,8 @@ import {
 } from "@/components/ui/select";
 import { trpc } from "@/trpc/react";
 import { toast } from "sonner";
+import { ReceiptUpload } from "./receipt-upload";
+import { ReceiptPreviewDialog } from "./receipt-preview-dialog";
 
 interface ExpenseFormData {
   amount: number;
@@ -29,6 +31,8 @@ interface ExpenseFormData {
   date: Date;
   categoryId?: string;
   type?: "expense" | "income";
+  receiptFile?: string;
+  receiptFileName?: string;
 }
 
 interface AddExpenseDialogProps {
@@ -39,18 +43,51 @@ interface AddExpenseDialogProps {
     date: Date;
     categoryId?: string | null;
     type?: "expense" | "income";
+    receiptFile?: string | null;
+    receiptFileName?: string | null;
   };
-  children: React.ReactNode;
+  children?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function AddExpenseDialog({ expense, children }: AddExpenseDialogProps) {
-  const [open, setOpen] = useState(false);
+export function AddExpenseDialog({ expense, children, open: controlledOpen, onOpenChange }: AddExpenseDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = onOpenChange !== undefined ? onOpenChange : setInternalOpen;
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState("");
   const [categoryId, setCategoryId] = useState<string | undefined>(undefined);
   const [type, setType] = useState<"expense" | "income">("expense");
+  const [receiptFile, setReceiptFile] = useState("");
+  const [receiptFileName, setReceiptFileName] = useState("");
+  const [previewExpense, setPreviewExpense] = useState<{ id: string; description: string; amount: string; date: Date; category?: { name: string; color: string } | null } | null>(null);
   const utils = trpc.useUtils();
+
+  useEffect(() => {
+    if (expense) {
+      setTimeout(() => {
+        setAmount(expense.amount);
+        setDescription(expense.description);
+        setDate(expense.date.toISOString().split('T')[0]);
+        setCategoryId(expense.categoryId ?? undefined);
+        setType(expense.type ?? "expense");
+        setReceiptFile(expense.receiptFile ?? "");
+        setReceiptFileName(expense.receiptFileName ?? "");
+      }, 0);
+    } else if (!controlledOpen) {
+      setTimeout(() => {
+        setAmount("");
+        setDescription("");
+        setDate("");
+        setCategoryId(undefined);
+        setType("expense");
+        setReceiptFile("");
+        setReceiptFileName("");
+      }, 0);
+    }
+  }, [expense, controlledOpen]);
 
   const categoriesQuery = trpc.categories.getAll.useQuery();
 
@@ -78,34 +115,19 @@ export function AddExpenseDialog({ expense, children }: AddExpenseDialogProps) {
     },
   });
 
-  // TODO: Fix form population when editing expense
-  // useEffect(() => {
-  //   if (expense) {
-  //     setAmount(expense.amount);
-  //     setDescription(expense.description);
-  //     setDate(new Date(expense.date).toISOString().split("T")[0]);
-  //     setCategoryId(expense.categoryId || undefined);
-  //     setType(expense.type || "expense");
-  //   } else {
-  //     setAmount("");
-  //     setDescription("");
-  //     setDate(new Date().toISOString().split("T")[0]);
-  //     setCategoryId(undefined);
-  //     setType("expense");
-  //   }
-  // }, [expense, open]);
-  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const data: ExpenseFormData = {
       amount: parseFloat(amount),
       description,
       date: new Date(date),
       categoryId,
       type,
+    receiptFile,
+      receiptFileName,
     };
-    
+
     if (expense) {
       updateMutation.mutate({ id: expense.id, ...data });
     } else {
@@ -123,9 +145,17 @@ export function AddExpenseDialog({ expense, children }: AddExpenseDialogProps) {
     return type === "income" ? "Add a new income to track" : "Add a new expense to track";
   };
 
+  const handleReceiptDelete = () => {
+    if (expense && expense.receiptFile) {
+      setReceiptFile("");
+      setReceiptFileName("");
+      toast.success("Receipt removed");
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{children}</DialogTrigger>
+      {children && <DialogTrigger asChild>{children}</DialogTrigger>}
       <DialogContent className="sm:max-w-[425px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
@@ -204,6 +234,12 @@ export function AddExpenseDialog({ expense, children }: AddExpenseDialogProps) {
                 </SelectContent>
               </Select>
             </div>
+            {(expense || receiptFile) && (
+              <ReceiptUpload expenseId={expense?.id || ""} onUploadComplete={(data) => {
+                setReceiptFile(data.fileName);
+                setReceiptFileName(data.fileName);
+              }} />
+            )}
           </div>
           <DialogFooter>
             <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
@@ -212,6 +248,22 @@ export function AddExpenseDialog({ expense, children }: AddExpenseDialogProps) {
           </DialogFooter>
         </form>
       </DialogContent>
+      {expense && receiptFile && (
+        <ReceiptPreviewDialog
+          expenseId={expense.id}
+          receiptFile={receiptFile || null}
+          receiptFileName={receiptFileName || null}
+          open={previewExpense !== null}
+          onClose={() => {
+            setPreviewExpense(null);
+            if (expense?.receiptFile) {
+              setReceiptFile(expense.receiptFile);
+              setReceiptFileName(expense.receiptFileName || "");
+            }
+          }}
+          onDelete={handleReceiptDelete}
+        />
+      )}
     </Dialog>
   );
 }
