@@ -16,7 +16,7 @@ export function ExpenseList() {
   const [filter, setFilter] = React.useState<FilterType>("all");
   const utils = trpc.useUtils();
 
-  const { data: expenses = [] } = trpc.expenses.getAll.useQuery();
+  const { data: expenses = [], isLoading } = trpc.expenses.getAll.useQuery();
 
   const deleteMutation = trpc.expenses.delete.useMutation({
     onSuccess: () => {
@@ -102,7 +102,15 @@ export function ExpenseList() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredExpenses.length === 0 ? (
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={6}>
+                  <div className="flex min-h-40 items-center justify-center text-muted-foreground">
+                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : filteredExpenses.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6}>
                   <div className="flex min-h-40 items-center justify-center text-muted-foreground">

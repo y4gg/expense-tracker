@@ -10,7 +10,7 @@ import { Edit2, Pause, Play, Trash2, Plus } from "lucide-react";
 export function RecurringList() {
   const utils = trpc.useUtils();
 
-  const { data: recurring = [] } = trpc.recurring.getAll.useQuery();
+  const { data: recurring = [], isLoading } = trpc.recurring.getAll.useQuery();
 
   const deleteMutation = trpc.recurring.delete.useMutation({
     onSuccess: () => {
@@ -55,7 +55,11 @@ export function RecurringList() {
         </div>
       </CardHeader>
       <CardContent className="pt-4">
-        {recurring.length === 0 ? (
+        {isLoading ? (
+          <div className="flex min-h-32 items-center justify-center text-muted-foreground">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          </div>
+        ) : recurring.length === 0 ? (
           <div className="flex min-h-32 items-center justify-center text-center text-muted-foreground">
             <p className="text-base">No recurring transactions yet</p>
           </div>

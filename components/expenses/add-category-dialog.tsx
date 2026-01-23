@@ -21,6 +21,7 @@ interface AddCategoryDialogProps {
 }
 
 export function AddCategoryDialog({ children }: AddCategoryDialogProps) {
+  const utils = trpc.useUtils();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [color, setColor] = useState("#3b82f6");
