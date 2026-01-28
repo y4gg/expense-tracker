@@ -217,11 +217,21 @@ export const expensesRouter = t.router({
       }
 
       const allowedTypes = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+      const allowedExtensions = [".jpg", ".jpeg", ".png", ".webp", ".pdf"];
 
-      if (!allowedTypes.includes(file.type)) {
+      if (!file.type || !file.name) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Only JPG, PNG, WebP, and PDF files are supported",
+          message: "Invalid file",
+        });
+      }
+
+      const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf("."));
+
+      if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `File type "${file.type}" (${fileExtension}) not supported. Only JPG, PNG, WebP, and PDF files are supported`,
         });
       }
 

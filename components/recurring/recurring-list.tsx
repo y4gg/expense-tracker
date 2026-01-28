@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { trpc } from "@/trpc/react";
 import { toast } from "sonner";
 import { Edit2, Pause, Play, Trash2, Plus } from "lucide-react";
+import { AddRecurringDialog } from "@/components/recurring/add-recurring-dialog";
 
 export function RecurringList() {
   const utils = trpc.useUtils();
@@ -48,10 +49,12 @@ export function RecurringList() {
             <CardTitle className="text-xl">Recurring Transactions</CardTitle>
             <CardDescription className="text-base">Manage your recurring transactions</CardDescription>
           </div>
-          <Button variant="default" disabled>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Recurring Transaction
-          </Button>
+          <AddRecurringDialog>
+            <Button variant="default">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Recurring Transaction
+            </Button>
+          </AddRecurringDialog>
         </div>
       </CardHeader>
       <CardContent className="pt-4">

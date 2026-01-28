@@ -42,8 +42,17 @@ export function ReceiptUpload({ expenseId, onUploadComplete }: ReceiptUploadProp
     }
 
     const allowedTypes = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
-    if (!allowedTypes.includes(selectedFile.type)) {
-      toast.error("Only JPG, PNG, WebP, and PDF files are supported");
+    const allowedExtensions = [".jpg", ".jpeg", ".png", ".webp", ".pdf"];
+
+    if (!selectedFile.type || !selectedFile.name) {
+      toast.error("Invalid file");
+      return;
+    }
+
+    const fileExtension = selectedFile.name.toLowerCase().substring(selectedFile.name.lastIndexOf("."));
+
+    if (!allowedTypes.includes(selectedFile.type) && !allowedExtensions.includes(fileExtension)) {
+      toast.error(`File type "${selectedFile.type}" (${fileExtension}) not supported. Only JPG, PNG, WebP, and PDF files are supported`);
       return;
     }
 

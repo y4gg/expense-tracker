@@ -22,8 +22,6 @@ import {
 } from "@/components/ui/select";
 import { trpc } from "@/trpc/react";
 import { toast } from "sonner";
-import { ReceiptUpload } from "./receipt-upload";
-import { ReceiptPreviewDialog } from "./receipt-preview-dialog";
 
 interface ExpenseFormData {
   amount: number;
@@ -31,8 +29,6 @@ interface ExpenseFormData {
   date: Date;
   categoryId?: string;
   type?: "expense" | "income";
-  receiptFile?: string;
-  receiptFileName?: string;
 }
 
 interface AddExpenseDialogProps {
@@ -43,8 +39,6 @@ interface AddExpenseDialogProps {
     date: Date;
     categoryId?: string | null;
     type?: "expense" | "income";
-    receiptFile?: string | null;
-    receiptFileName?: string | null;
   };
   children?: React.ReactNode;
   open?: boolean;
@@ -60,9 +54,6 @@ export function AddExpenseDialog({ expense, children, open: controlledOpen, onOp
   const [date, setDate] = useState("");
   const [categoryId, setCategoryId] = useState<string | undefined>(undefined);
   const [type, setType] = useState<"expense" | "income">("expense");
-  const [receiptFile, setReceiptFile] = useState("");
-  const [receiptFileName, setReceiptFileName] = useState("");
-  const [previewExpense, setPreviewExpense] = useState<{ id: string; description: string; amount: string; date: Date; category?: { name: string; color: string } | null } | null>(null);
   const utils = trpc.useUtils();
 
   useEffect(() => {
@@ -73,8 +64,6 @@ export function AddExpenseDialog({ expense, children, open: controlledOpen, onOp
         setDate(expense.date.toISOString().split('T')[0]);
         setCategoryId(expense.categoryId ?? undefined);
         setType(expense.type ?? "expense");
-        setReceiptFile(expense.receiptFile ?? "");
-        setReceiptFileName(expense.receiptFileName ?? "");
       }, 0);
     } else if (!controlledOpen) {
       setTimeout(() => {
@@ -83,8 +72,6 @@ export function AddExpenseDialog({ expense, children, open: controlledOpen, onOp
         setDate("");
         setCategoryId(undefined);
         setType("expense");
-        setReceiptFile("");
-        setReceiptFileName("");
       }, 0);
     }
   }, [expense, controlledOpen]);
@@ -124,8 +111,6 @@ export function AddExpenseDialog({ expense, children, open: controlledOpen, onOp
       date: new Date(date),
       categoryId,
       type,
-    receiptFile,
-      receiptFileName,
     };
 
     if (expense) {
@@ -143,14 +128,6 @@ export function AddExpenseDialog({ expense, children, open: controlledOpen, onOp
   const getDialogDescription = () => {
     if (expense) return "Update your transaction details";
     return type === "income" ? "Add a new income to track" : "Add a new expense to track";
-  };
-
-  const handleReceiptDelete = () => {
-    if (expense && expense.receiptFile) {
-      setReceiptFile("");
-      setReceiptFileName("");
-      toast.success("Receipt removed");
-    }
   };
 
   return (
@@ -234,12 +211,6 @@ export function AddExpenseDialog({ expense, children, open: controlledOpen, onOp
                 </SelectContent>
               </Select>
             </div>
-            {(expense || receiptFile) && (
-              <ReceiptUpload expenseId={expense?.id || ""} onUploadComplete={(data) => {
-                setReceiptFile(data.fileName);
-                setReceiptFileName(data.fileName);
-              }} />
-            )}
           </div>
           <DialogFooter>
             <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
@@ -248,22 +219,6 @@ export function AddExpenseDialog({ expense, children, open: controlledOpen, onOp
           </DialogFooter>
         </form>
       </DialogContent>
-      {expense && receiptFile && (
-        <ReceiptPreviewDialog
-          expenseId={expense.id}
-          receiptFile={receiptFile || null}
-          receiptFileName={receiptFileName || null}
-          open={previewExpense !== null}
-          onClose={() => {
-            setPreviewExpense(null);
-            if (expense?.receiptFile) {
-              setReceiptFile(expense.receiptFile);
-              setReceiptFileName(expense.receiptFileName || "");
-            }
-          }}
-          onDelete={handleReceiptDelete}
-        />
-      )}
     </Dialog>
   );
 }

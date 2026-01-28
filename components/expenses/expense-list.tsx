@@ -3,12 +3,25 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { AddExpenseDialog } from "./add-expense-dialog";
 import { trpc } from "@/trpc/react";
 import { toast } from "sonner";
-import { Trash2, RotateCw, FileImage, Pencil } from "lucide-react";
 import { ReceiptPreviewDialog } from "./receipt-preview-dialog";
 import { DeleteConfirmDialog } from "./delete-confirm-dialog";
+import { TransactionActionMenu } from "./transaction-action-menu";
+import { ReceiptUpload } from "./receipt-upload";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 
 type FilterType = "all" | "expense" | "income";
 
@@ -27,11 +40,11 @@ export function ExpenseList() {
     date: Date;
     categoryId?: string | null;
     type?: "expense" | "income";
-    receiptFile?: string | null;
-    receiptFileName?: string | null;
   } | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [expenseToDelete, setExpenseToDelete] = useState<string | null>(null);
+  const [contextMenuExpenseId, setContextMenuExpenseId] = useState<string | null>(null);
+  const [uploadingExpenseId, setUploadingExpenseId] = useState<string | null>(null);
   const deleteMutation = trpc.expenses.delete.useMutation({
     onSuccess: () => {
       toast.success("Transaction deleted successfully");
@@ -87,20 +100,17 @@ export function ExpenseList() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[140px]">Date</TableHead>
+                <TableHead className="min-w-[120px]">Date</TableHead>
                 <TableHead>Description</TableHead>
-                <TableHead className="w-[160px]">Category</TableHead>
-                <TableHead className="w-[120px] text-right">Amount</TableHead>
-                <TableHead className="w-[40px]" />
-                <TableHead className="w-[60px]" />
-                <TableHead className="w-[50px]" />
-                <TableHead className="w-[50px]" />
+                <TableHead className="min-w-[140px]">Category</TableHead>
+                <TableHead className="min-w-[100px] text-right">Amount</TableHead>
+                <TableHead className="min-w-[60px]" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6}>
+                  <TableCell colSpan={4}>
                     <div className="flex min-h-40 items-center justify-center text-muted-foreground">
                       <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
                     </div>
@@ -108,95 +118,100 @@ export function ExpenseList() {
                 </TableRow>
               ) : filteredExpenses.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6}>
+                  <TableCell colSpan={4}>
                     <div className="flex min-h-40 items-center justify-center text-muted-foreground">
                       <p className="text-base">{getEmptyMessage()}</p>
                     </div>
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredExpenses.map((expense) => (
-                  <TableRow key={expense.id}>
-                    <TableCell className="font-medium">
-                      {new Date(expense.date).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>{expense.description}</TableCell>
-                    <TableCell>
-                      {expense.category ? (
-                        <Badge
-                          style={{ backgroundColor: expense.category.color }}
-                          className="rounded-md px-2.5 py-1 text-sm font-medium text-white"
-                        >
-                          {expense.category.name}
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="rounded-md px-2.5 py-1 text-sm">
-                          Uncategorized
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className={`text-right font-semibold ${expense.type === "income" ? "text-green-600 dark:text-green-500" : "text-red-600 dark:text-red-500"}`}>
-                      {expense.type === "income" ? "+" : "-"}${parseFloat(expense.amount).toFixed(2)}
-                    </TableCell>
-                    <TableCell>
-                      {expense.recurringTransactionId && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 p-0 text-muted-foreground hover:text-primary"
-                          onClick={() => window.location.href = `/dashboard/settings`}
-                        >
-                          <RotateCw className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {expense.receiptFile && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 p-0 text-muted-foreground hover:text-primary"
-                          onClick={() => setPreviewExpense({ id: expense.id })}
-                        >
-                          <FileImage className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 p-0 text-muted-foreground hover:text-primary"
-                        onClick={() => setEditingExpense({
-                          id: expense.id,
-                          amount: expense.amount,
-                          description: expense.description,
-                          date: new Date(expense.date),
-                          categoryId: expense.categoryId,
-                          type: expense.type,
-                          receiptFile: expense.receiptFile,
-                          receiptFileName: expense.receiptFileName,
-                        })}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                        onClick={() => {
-                          setExpenseToDelete(expense.id);
-                          setDeleteConfirmOpen(true);
+                filteredExpenses.map((expense) => {
+                  const expenseData = {
+                    id: expense.id,
+                    amount: expense.amount,
+                    description: expense.description,
+                    date: new Date(expense.date),
+                    categoryId: expense.categoryId,
+                    type: expense.type,
+                  };
+
+                  return (
+                    <>
+                      <TableRow
+                        key={expense.id}
+                        onContextMenu={(e) => {
+                          e.preventDefault();
+                          setContextMenuExpenseId(expense.id);
                         }}
-                        disabled={deleteMutation.isPending}
                       >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
+                        <TableCell className="font-medium">
+                          {new Date(expense.date).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>{expense.description}</TableCell>
+                        <TableCell>
+                          {expense.category ? (
+                            <Badge
+                              style={{ backgroundColor: expense.category.color }}
+                              className="rounded-md px-2.5 py-1 text-sm font-medium text-white"
+                            >
+                              {expense.category.name}
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="rounded-md px-2.5 py-1 text-sm">
+                              Uncategorized
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className={`text-right font-semibold ${expense.type === "income" ? "text-green-600 dark:text-green-500" : "text-red-600 dark:text-red-500"}`}>
+                          {expense.type === "income" ? "+" : "-"}${parseFloat(expense.amount).toFixed(2)}
+                        </TableCell>
+                        <TableCell>
+                          <TransactionActionMenu
+                            hasReceipt={!!expense.receiptFile}
+                            hasRecurring={!!expense.recurringTransactionId}
+                            onRecurringClick={() => window.location.href = `/dashboard/settings`}
+                            onEdit={() => setEditingExpense(expenseData)}
+                            onViewReceipt={() => setPreviewExpense({ id: expense.id })}
+                            onUploadReceipt={() => setUploadingExpenseId(expense.id)}
+                            onDelete={() => {
+                              setExpenseToDelete(expense.id);
+                              setDeleteConfirmOpen(true);
+                            }}
+                          />
+                        </TableCell>
+                      </TableRow>
+                      {contextMenuExpenseId === expense.id && (
+                        <DropdownMenu open={true} onOpenChange={(open) => {
+                          if (!open) setContextMenuExpenseId(null);
+                        }}>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => {
+                              setEditingExpense(expenseData);
+                              setContextMenuExpenseId(null);
+                            }}>Edit</DropdownMenuItem>
+                            {expense.receiptFile && (
+                              <DropdownMenuItem onClick={() => {
+                                setPreviewExpense({ id: expense.id });
+                                setContextMenuExpenseId(null);
+                              }}>View Receipt</DropdownMenuItem>
+                            )}
+                            {!expense.receiptFile && (
+                              <DropdownMenuItem onClick={() => {
+                                setUploadingExpenseId(expense.id);
+                                setContextMenuExpenseId(null);
+                              }}>Upload Receipt</DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem onClick={() => {
+                              setExpenseToDelete(expense.id);
+                              setDeleteConfirmOpen(true);
+                              setContextMenuExpenseId(null);
+                            }} variant="destructive">Delete</DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                    </>
+                  );
+                })
               )}
             </TableBody>
           </Table>
@@ -225,6 +240,26 @@ export function ExpenseList() {
             }
           }}
         />
+      )}
+      {uploadingExpenseId && (
+        <Dialog open={!!uploadingExpenseId} onOpenChange={(open) => {
+          if (!open) setUploadingExpenseId(null);
+        }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Upload Receipt</DialogTitle>
+              <DialogDescription>Upload a receipt for this transaction</DialogDescription>
+            </DialogHeader>
+            <ReceiptUpload
+              expenseId={uploadingExpenseId}
+              onUploadComplete={(data) => {
+                toast.success("Receipt uploaded successfully");
+                utils.expenses.invalidate();
+                setUploadingExpenseId(null);
+              }}
+            />
+          </DialogContent>
+        </Dialog>
       )}
       <DeleteConfirmDialog
         open={deleteConfirmOpen}

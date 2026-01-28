@@ -34,7 +34,15 @@ export async function uploadReceipt(userId: string, expenseId: string, file: Fil
   const fileName = file.name;
   const filePath = generateReceiptPath(userId, expenseId, fileName);
 
-  await client.write(filePath, file);
+  try {
+    console.log("Uploading to S3:", { filePath, fileName, fileType: file.type, fileSize: file.size });
+    await client.write(filePath, file);
+    console.log("Upload successful");
+  } catch (error) {
+    console.error("S3 Upload Error:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to upload receipt: ${errorMessage}`);
+  }
 
   return {
     filePath,
