@@ -90,9 +90,6 @@ export function ExpenseList() {
               <Button variant={filter === "all" ? "default" : "ghost"} size="sm" onClick={() => setFilter("all")}>All</Button>
               <Button variant={filter === "expense" ? "default" : "ghost"} size="sm" onClick={() => setFilter("expense")}>Expenses</Button>
               <Button variant={filter === "income" ? "default" : "ghost"} size="sm" onClick={() => setFilter("income")}>Income</Button>
-              <AddExpenseDialog>
-                <Button size="default">Add</Button>
-              </AddExpenseDialog>
             </div>
           </div>
         </CardHeader>

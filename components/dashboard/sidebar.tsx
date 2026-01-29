@@ -10,6 +10,7 @@ import {
   List,
   Tag,
   Settings,
+  Target,
   Menu,
 } from "lucide-react";
 
@@ -23,6 +24,7 @@ const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: <LayoutDashboard className="h-5 w-5" /> },
   { href: "/dashboard/transactions", label: "Transactions", icon: <List className="h-5 w-5" /> },
   { href: "/dashboard/categories", label: "Categories", icon: <Tag className="h-5 w-5" /> },
+  { href: "/dashboard/budget", label: "Budgets & Goals", icon: <Target className="h-5 w-5" /> },
   { href: "/dashboard/settings", label: "Settings", icon: <Settings className="h-5 w-5" /> },
 ];
 
@@ -67,7 +69,7 @@ export function Sidebar({ userName, userEmail }: SidebarProps) {
 
   return (
     <>
-      <div className="hidden lg:flex lg:w-64 lg:flex-col lg:border-r lg:bg-card">
+      <div className="hidden lg:flex lg:sticky lg:top-0 lg:h-screen lg:w-64 lg:flex-col lg:border-r lg:bg-card">
         <div className="flex h-16 items-center border-b px-6">
           <h1 className="text-xl font-bold">Financial Tracker</h1>
         </div>

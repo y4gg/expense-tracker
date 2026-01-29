@@ -156,6 +156,8 @@ export const userRelations = relations(user, ({ many }) => ({
   categories: many(category),
   expenses: many(expense),
   recurringTransactions: many(recurringTransaction),
+  budgets: many(budget),
+  savingsGoals: many(savingsGoal),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -179,6 +181,7 @@ export const categoryRelations = relations(category, ({ one, many }) => ({
   }),
   expenses: many(expense),
   recurringTransactions: many(recurringTransaction),
+  budgets: many(budget),
 }));
 
 export const recurringTransactionRelations = relations(recurringTransaction, ({ one, many }) => ({
@@ -193,6 +196,51 @@ export const recurringTransactionRelations = relations(recurringTransaction, ({ 
   expenses: many(expense),
 }));
 
+export const budget = pgTable(
+  "budget",
+  {
+    id: text("id").primaryKey(),
+    categoryId: text("category_id").references(() => category.id, { onDelete: "cascade" }),
+    amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("budget_userId_idx").on(table.userId),
+    index("budget_categoryId_idx").on(table.categoryId),
+  ],
+);
+
+export const savingsGoal = pgTable(
+  "savings_goal",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    targetAmount: numeric("target_amount", { precision: 10, scale: 2 }).notNull(),
+    currentAmount: numeric("current_amount", { precision: 10, scale: 2 }).notNull().default("0"),
+    targetDate: timestamp("target_date").notNull(),
+    icon: text("icon").notNull().default("Target"),
+    color: text("color").notNull().default("#6366f1"),
+    isActive: boolean("is_active").notNull().default(true),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("savings_goal_userId_idx").on(table.userId),
+    index("savings_goal_isActive_idx").on(table.isActive),
+  ],
+);
+
 export const expenseRelations = relations(expense, ({ one }) => ({
   user: one(user, {
     fields: [expense.userId],
@@ -205,5 +253,23 @@ export const expenseRelations = relations(expense, ({ one }) => ({
   recurringTransaction: one(recurringTransaction, {
     fields: [expense.recurringTransactionId],
     references: [recurringTransaction.id],
+  }),
+}));
+
+export const budgetRelations = relations(budget, ({ one }) => ({
+  user: one(user, {
+    fields: [budget.userId],
+    references: [user.id],
+  }),
+  category: one(category, {
+    fields: [budget.categoryId],
+    references: [category.id],
+  }),
+}));
+
+export const savingsGoalRelations = relations(savingsGoal, ({ one }) => ({
+  user: one(user, {
+    fields: [savingsGoal.userId],
+    references: [user.id],
   }),
 }));
