@@ -1,6 +1,6 @@
-"use client"; 
+"use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,17 +40,41 @@ interface AddExpenseDialogProps {
     categoryId?: string | null;
     type?: "expense" | "income";
   };
-  children: React.ReactNode;
+  children?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function AddExpenseDialog({ expense, children }: AddExpenseDialogProps) {
-  const [open, setOpen] = useState(false);
+export function AddExpenseDialog({ expense, children, open: controlledOpen, onOpenChange }: AddExpenseDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = onOpenChange !== undefined ? onOpenChange : setInternalOpen;
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState("");
   const [categoryId, setCategoryId] = useState<string | undefined>(undefined);
   const [type, setType] = useState<"expense" | "income">("expense");
   const utils = trpc.useUtils();
+
+  useEffect(() => {
+    if (expense) {
+      setTimeout(() => {
+        setAmount(expense.amount);
+        setDescription(expense.description);
+        setDate(expense.date.toISOString().split('T')[0]);
+        setCategoryId(expense.categoryId ?? undefined);
+        setType(expense.type ?? "expense");
+      }, 0);
+    } else if (!controlledOpen) {
+      setTimeout(() => {
+        setAmount("");
+        setDescription("");
+        setDate("");
+        setCategoryId(undefined);
+        setType("expense");
+      }, 0);
+    }
+  }, [expense, controlledOpen]);
 
   const categoriesQuery = trpc.categories.getAll.useQuery();
 
@@ -78,26 +102,9 @@ export function AddExpenseDialog({ expense, children }: AddExpenseDialogProps) {
     },
   });
 
-  // TODO: Fix form population when editing expense
-  // useEffect(() => {
-  //   if (expense) {
-  //     setAmount(expense.amount);
-  //     setDescription(expense.description);
-  //     setDate(new Date(expense.date).toISOString().split("T")[0]);
-  //     setCategoryId(expense.categoryId || undefined);
-  //     setType(expense.type || "expense");
-  //   } else {
-  //     setAmount("");
-  //     setDescription("");
-  //     setDate(new Date().toISOString().split("T")[0]);
-  //     setCategoryId(undefined);
-  //     setType("expense");
-  //   }
-  // }, [expense, open]);
-  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const data: ExpenseFormData = {
       amount: parseFloat(amount),
       description,
@@ -105,7 +112,7 @@ export function AddExpenseDialog({ expense, children }: AddExpenseDialogProps) {
       categoryId,
       type,
     };
-    
+
     if (expense) {
       updateMutation.mutate({ id: expense.id, ...data });
     } else {
@@ -125,7 +132,7 @@ export function AddExpenseDialog({ expense, children }: AddExpenseDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{children}</DialogTrigger>
+      {children && <DialogTrigger asChild>{children}</DialogTrigger>}
       <DialogContent className="sm:max-w-[425px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>

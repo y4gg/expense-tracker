@@ -131,6 +131,9 @@ export const expense = pgTable(
     categoryId: text("category_id").references(() => category.id, { onDelete: "set null" }),
     type: transactionType("type").notNull().default("expense"),
     recurringTransactionId: text("recurring_transaction_id").references(() => recurringTransaction.id, { onDelete: "set null" }),
+    receiptFile: text("receipt_file"),
+    receiptUrl: text("receipt_url"),
+    receiptFileName: text("receipt_file_name"),
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),

@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { expense, category } from "@/db/schema";
 import { nanoid } from "nanoid";
 import { t } from "../trpc";
+import { uploadReceipt, getPresignedUrl, deleteReceipt } from "@/lib/s3";
 
 export const expensesRouter = t.router({
   getAll: t.procedure
@@ -38,6 +39,8 @@ export const expensesRouter = t.router({
           categoryId: expense.categoryId,
           type: expense.type,
           recurringTransactionId: expense.recurringTransactionId,
+          receiptFile: expense.receiptFile,
+          receiptFileName: expense.receiptFileName,
           category: {
             id: category.id,
             name: category.name,
@@ -64,6 +67,8 @@ export const expensesRouter = t.router({
         categoryId: z.string().optional(),
         type: z.enum(["expense", "income"]).default("expense"),
         recurringTransactionId: z.string().optional(),
+        receiptFile: z.string().optional(),
+        receiptFileName: z.string().optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -82,6 +87,8 @@ export const expensesRouter = t.router({
         categoryId: input.categoryId || null,
         type: input.type,
         recurringTransactionId: input.recurringTransactionId || null,
+        receiptFile: input.receiptFile || null,
+        receiptFileName: input.receiptFileName || null,
         userId: ctx.session.user.id,
       });
 
@@ -98,6 +105,8 @@ export const expensesRouter = t.router({
         categoryId: z.string().optional(),
         type: z.enum(["expense", "income"]).optional(),
         recurringTransactionId: z.string().optional(),
+        receiptFile: z.string().optional(),
+        receiptFileName: z.string().optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -130,6 +139,8 @@ export const expensesRouter = t.router({
           categoryId: input.categoryId || existing[0].categoryId,
           type: input.type || existing[0].type,
           recurringTransactionId: input.recurringTransactionId || existing[0].recurringTransactionId,
+          receiptFile: input.receiptFile || existing[0].receiptFile,
+          receiptFileName: input.receiptFileName || existing[0].receiptFileName,
         })
         .where(eq(expense.id, input.id));
 
@@ -146,22 +157,137 @@ export const expensesRouter = t.router({
         });
       }
 
-      const existing = await db
+      const existingExpense = await db
         .select()
         .from(expense)
         .where(and(eq(expense.id, input.id), eq(expense.userId, ctx.session.user.id)))
         .limit(1);
 
-      if (!existing.length) {
+      if (!existingExpense.length) {
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "Expense not found",
         });
       }
 
+      if (existingExpense[0].receiptFile) {
+        await deleteReceipt(existingExpense[0].receiptFile);
+      }
+
       await db.delete(expense).where(eq(expense.id, input.id));
 
       return { success: true };
+    }),
+
+  uploadReceipt: t.procedure
+    .input(
+      z.object({
+        expenseId: z.string(),
+        file: z.any(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      if (!ctx.session) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "You must be logged in to upload a receipt",
+        });
+      }
+
+      const existingExpense = await db
+        .select()
+        .from(expense)
+        .where(and(eq(expense.id, input.expenseId), eq(expense.userId, ctx.session.user.id)))
+        .limit(1);
+
+      if (!existingExpense.length) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Expense not found",
+        });
+      }
+
+      const file = input.file as File;
+
+      if (file.size > 10 * 1024 * 1024) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Receipt file must be under 10MB",
+        });
+      }
+
+      const allowedTypes = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+      const allowedExtensions = [".jpg", ".jpeg", ".png", ".webp", ".pdf"];
+
+      if (!file.type || !file.name) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Invalid file",
+        });
+      }
+
+      const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf("."));
+
+      if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `File type "${file.type}" (${fileExtension}) not supported. Only JPG, PNG, WebP, and PDF files are supported`,
+        });
+      }
+
+      const { filePath, fileName } = await uploadReceipt(ctx.session.user.id, input.expenseId, file);
+
+      await db
+        .update(expense)
+        .set({
+          receiptFile: filePath,
+          receiptFileName: fileName,
+        })
+        .where(eq(expense.id, input.expenseId));
+
+      return {
+        success: true,
+        filePath,
+        fileName,
+      };
+    }),
+
+  getPresignedReceiptUrl: t.procedure
+    .input(z.object({ expenseId: z.string() }))
+    .query(async ({ input, ctx }) => {
+      if (!ctx.session) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "You must be logged in to get receipt URL",
+        });
+      }
+
+      const existingExpense = await db
+        .select()
+        .from(expense)
+        .where(and(eq(expense.id, input.expenseId), eq(expense.userId, ctx.session.user.id)))
+        .limit(1);
+
+      if (!existingExpense.length) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Expense not found",
+        });
+      }
+
+      if (!existingExpense[0].receiptFile) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "No receipt uploaded for this expense",
+        });
+      }
+
+      const url = await getPresignedUrl(existingExpense[0].receiptFile);
+
+      return {
+        url,
+        fileName: existingExpense[0].receiptFileName,
+      };
     }),
 
   getSummary: t.procedure

@@ -6,7 +6,7 @@ import { trpc } from "@/trpc/react";
 import { AddCategoryDialog } from "@/components/expenses/add-category-dialog";
 
 export default function CategoriesPage() {
-  const { data: categories = [] } = trpc.categories.getAll.useQuery();
+  const { data: categories = [], isLoading } = trpc.categories.getAll.useQuery();
 
   return (
     <>
@@ -23,19 +23,29 @@ export default function CategoriesPage() {
         </AddCategoryDialog>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {categories.map((category) => (
-          <div key={category.id} className="rounded-lg border bg-card text-card-foreground shadow-md p-4">
-            <div className="flex items-center gap-2">
-              <div
-                className="h-14 w-14 rounded-full"
-                style={{ backgroundColor: category.color }}
-              />
-              <h3 className="text-lg font-semibold">{category.name}</h3>
+      {isLoading ? (
+        <div className="flex items-center justify-center min-h-40">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        </div>
+      ) : categories.length === 0 ? (
+        <div className="flex items-center justify-center min-h-40 text-muted-foreground">
+          <p className="text-base">No categories yet</p>
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {categories.map((category) => (
+            <div key={category.id} className="rounded-lg border bg-card text-card-foreground shadow-md p-4">
+              <div className="flex items-center gap-2">
+                <div
+                  className="h-14 w-14 rounded-full"
+                  style={{ backgroundColor: category.color }}
+                />
+                <h3 className="text-lg font-semibold">{category.name}</h3>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </>
   );
 }
