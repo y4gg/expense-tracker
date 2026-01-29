@@ -74,4 +74,41 @@ export const categoriesRouter = t.router({
 
       return { success: true };
     }),
+
+  update: t.procedure
+    .input(
+      z.object({
+        id: z.string(),
+        name: z.string().min(1).max(100),
+        color: z.string().min(1).max(50),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      if (!ctx.session) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "You must be logged in to update a category",
+        });
+      }
+
+      const existing = await db
+        .select()
+        .from(category)
+        .where(and(eq(category.id, input.id), eq(category.userId, ctx.session.user.id)))
+        .limit(1);
+
+      if (!existing.length) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Category not found",
+        });
+      }
+
+      await db
+        .update(category)
+        .set({ name: input.name, color: input.color })
+        .where(eq(category.id, input.id));
+
+      return { success: true };
+    }),
 });

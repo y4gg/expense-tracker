@@ -36,6 +36,20 @@
       "when": 1769127630017,
       "tag": "0004_workable_betty_ross",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1769693451575,
+      "tag": "0005_fast_otto_octavius",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1769695297187,
+      "tag": "0006_mysterious_elektra",
+      "breakpoints": true
     }
   ]
 }
