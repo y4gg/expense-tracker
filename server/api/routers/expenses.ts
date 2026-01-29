@@ -323,15 +323,17 @@ export const expensesRouter = t.router({
     }),
 
   getMonthlyTotals: t.procedure
-    .query(async ({ ctx }) => {
+    .input(z.object({ months: z.number().optional().default(6) }).optional())
+    .query(async ({ input, ctx }) => {
       if (!ctx.session) {
         return [];
       }
 
-      const sixMonthsAgo = new Date();
-      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
-      sixMonthsAgo.setDate(1);
-      sixMonthsAgo.setHours(0, 0, 0, 0);
+      const months = input?.months ?? 6;
+      const monthsAgo = new Date();
+      monthsAgo.setMonth(monthsAgo.getMonth() - (months - 1));
+      monthsAgo.setDate(1);
+      monthsAgo.setHours(0, 0, 0, 0);
 
       const result = await db
         .select({
@@ -340,7 +342,7 @@ export const expensesRouter = t.router({
           total: sql<number>`CAST(SUM(${expense.amount}) AS NUMERIC)`,
         })
         .from(expense)
-        .where(and(eq(expense.userId, ctx.session.user.id), gte(expense.date, sixMonthsAgo)))
+        .where(and(eq(expense.userId, ctx.session.user.id), gte(expense.date, monthsAgo)))
         .groupBy(sql`DATE_TRUNC('month', ${expense.date})`, expense.type)
         .orderBy(sql`DATE_TRUNC('month', ${expense.date})`);
 
@@ -382,15 +384,17 @@ export const expensesRouter = t.router({
     }),
 
   getCategoryBreakdown: t.procedure
-    .query(async ({ ctx }) => {
+    .input(z.object({ months: z.number().optional().default(6) }).optional())
+    .query(async ({ input, ctx }) => {
       if (!ctx.session) {
         return [];
       }
 
-      const sixMonthsAgo = new Date();
-      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
-      sixMonthsAgo.setDate(1);
-      sixMonthsAgo.setHours(0, 0, 0, 0);
+      const months = input?.months ?? 6;
+      const monthsAgo = new Date();
+      monthsAgo.setMonth(monthsAgo.getMonth() - (months - 1));
+      monthsAgo.setDate(1);
+      monthsAgo.setHours(0, 0, 0, 0);
 
       const result = await db
         .select({
@@ -401,7 +405,7 @@ export const expensesRouter = t.router({
         })
         .from(expense)
         .leftJoin(category, eq(expense.categoryId, category.id))
-        .where(and(eq(expense.userId, ctx.session.user.id), eq(expense.type, "expense"), gte(expense.date, sixMonthsAgo)))
+        .where(and(eq(expense.userId, ctx.session.user.id), eq(expense.type, "expense"), gte(expense.date, monthsAgo)))
         .groupBy(expense.categoryId, category.name, category.color)
         .orderBy(desc(sql`SUM(${expense.amount})`));
 

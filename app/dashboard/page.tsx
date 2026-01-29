@@ -3,9 +3,7 @@ import { db } from "@/db";
 import { expense } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { eq, sql } from "drizzle-orm";
-import { MonthlyIncomeExpenseChart } from "@/components/dashboard/charts/monthly-income-expense-chart";
-import { CategoryBreakdownChart } from "@/components/dashboard/charts/category-breakdown-chart";
-import { BalanceTrendChart } from "@/components/dashboard/charts/balance-trend-chart";
+import { DashboardContent } from "@/components/dashboard/dashboard-content";
 
 export default async function DashboardPage() {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -36,31 +34,11 @@ export default async function DashboardPage() {
         <p className="mt-2 text-lg text-muted-foreground">Overview of your finances</p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-12">
-        <div className="rounded-xl border bg-card text-card-foreground shadow-md p-6">
-          <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Total Income</h3>
-          <p className="mt-4 text-5xl font-bold tracking-tight text-green-600 dark:text-green-500">{totalIncome.toFixed(2)}</p>
-        </div>
-
-        <div className="rounded-xl border bg-card text-card-foreground shadow-md p-6">
-          <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Total Expenses</h3>
-          <p className="mt-4 text-5xl font-bold tracking-tight text-red-600 dark:text-red-500">{totalExpenses.toFixed(2)}</p>
-        </div>
-
-        <div className="rounded-xl border bg-card text-card-foreground shadow-md p-6">
-          <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Net Balance</h3>
-          <p className={`mt-4 text-5xl font-bold tracking-tight ${netBalance >= 0 ? "text-green-600 dark:text-green-500" : "text-red-600 dark:text-red-500"}`}>
-            {netBalance.toFixed(2)}
-          </p>
-        </div>
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-12">
-        <MonthlyIncomeExpenseChart />
-        <CategoryBreakdownChart />
-      </div>
-
-      <BalanceTrendChart />
+      <DashboardContent
+        totalIncome={totalIncome}
+        totalExpenses={totalExpenses}
+        netBalance={netBalance}
+      />
     </>
   );
 }
