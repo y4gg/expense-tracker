@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { eq, and, desc, sql, gte } from "drizzle-orm";
+import { eq, and, desc, sql, gte, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { expense, category } from "@/db/schema";
 import { nanoid } from "nanoid";
@@ -177,6 +177,100 @@ export const expensesRouter = t.router({
       await db.delete(expense).where(eq(expense.id, input.id));
 
       return { success: true };
+    }),
+
+  bulkDelete: t.procedure
+    .input(z.object({ ids: z.array(z.string()).min(1) }))
+    .mutation(async ({ input, ctx }) => {
+      if (!ctx.session) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "You must be logged in to delete expenses",
+        });
+      }
+
+      const existingExpenses = await db
+        .select()
+        .from(expense)
+        .where(
+          and(
+            inArray(expense.id, input.ids),
+            eq(expense.userId, ctx.session.user.id)
+          )
+        );
+
+      if (existingExpenses.length !== input.ids.length) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "One or more expenses not found",
+        });
+      }
+
+      for (const exp of existingExpenses) {
+        if (exp.receiptFile) {
+          await deleteReceipt(exp.receiptFile);
+        }
+      }
+
+      await db
+        .delete(expense)
+        .where(inArray(expense.id, input.ids));
+
+      return { success: true, count: input.ids.length };
+    }),
+
+  bulkUpdate: t.procedure
+    .input(
+      z.object({
+        ids: z.array(z.string()).min(1),
+        categoryId: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      if (!ctx.session) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "You must be logged in to update expenses",
+        });
+      }
+
+      const existingExpenses = await db
+        .select()
+        .from(expense)
+        .where(
+          and(
+            inArray(expense.id, input.ids),
+            eq(expense.userId, ctx.session.user.id)
+          )
+        );
+
+      if (existingExpenses.length !== input.ids.length) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "One or more expenses not found",
+        });
+      }
+
+      const updateData: {
+        categoryId?: string | null;
+      } = {};
+      if (input.categoryId !== undefined) {
+        updateData.categoryId = input.categoryId;
+      }
+
+      if (Object.keys(updateData).length === 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "No fields to update provided",
+        });
+      }
+
+      await db
+        .update(expense)
+        .set(updateData)
+        .where(inArray(expense.id, input.ids));
+
+      return { success: true, count: input.ids.length };
     }),
 
   uploadReceipt: t.procedure

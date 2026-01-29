@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -22,6 +23,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
+import { BulkActionBar } from "./bulk-action-bar";
+import { BulkDeleteDialog } from "./bulk-delete-dialog";
+import { BulkCategoryDialog } from "./bulk-category-dialog";
 
 type FilterType = "all" | "expense" | "income";
 
@@ -30,6 +34,9 @@ export function ExpenseList() {
   const utils = trpc.useUtils();
 
   const { data: expenses = [], isLoading } = trpc.expenses.getAll.useQuery();
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkCategoryOpen, setBulkCategoryOpen] = useState(false);
   const [previewExpense, setPreviewExpense] = useState<{
     id: string;
   } | null>(null);
@@ -54,10 +61,68 @@ export function ExpenseList() {
     },
   });
 
+  const bulkDeleteMutation = trpc.expenses.bulkDelete.useMutation({
+    onSuccess: (data) => {
+      toast.success(`${data.count} transaction${data.count !== 1 ? "s" : ""} deleted successfully`);
+      utils.expenses.invalidate();
+      setSelectedIds(new Set());
+      setBulkDeleteOpen(false);
+    },
+    onError: () => {
+      toast.error("Failed to delete transactions");
+    },
+  });
+
+  const bulkUpdateMutation = trpc.expenses.bulkUpdate.useMutation({
+    onSuccess: (data) => {
+      toast.success(`${data.count} transaction${data.count !== 1 ? "s" : ""} updated successfully`);
+      utils.expenses.invalidate();
+      setSelectedIds(new Set());
+      setBulkCategoryOpen(false);
+    },
+    onError: () => {
+      toast.error("Failed to update transactions");
+    },
+  });
+
   const filteredExpenses = expenses.filter((expense) => {
     if (filter === "all") return true;
     return expense.type === filter;
   });
+
+  const filteredSelectedIds = Array.from(selectedIds).filter((id) =>
+    filteredExpenses.some((e) => e.id === id)
+  );
+
+  const allSelected = filteredExpenses.length > 0 && filteredSelectedIds.length === filteredExpenses.length;
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedIds(new Set(filteredExpenses.map((e) => e.id)));
+    } else {
+      setSelectedIds(new Set());
+    }
+  };
+
+  const handleToggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handleBulkDelete = () => {
+    bulkDeleteMutation.mutate({ ids: filteredSelectedIds });
+  };
+
+  const handleBulkCategoryChange = (categoryId: string | null) => {
+    bulkUpdateMutation.mutate({ ids: filteredSelectedIds, categoryId: categoryId ?? undefined });
+  };
 
   const getEmptyMessage = () => {
     if (filter === "all") return "No transactions yet. Add your first transaction!";
@@ -77,6 +142,10 @@ export function ExpenseList() {
     return "Your income history";
   };
 
+  const hasReceiptsInSelection = filteredSelectedIds.some((id) =>
+    expenses.find((e) => e.id === id)?.receiptFile
+  );
+
   return (
     <>
       <Card className="rounded-xl shadow-md">
@@ -94,9 +163,26 @@ export function ExpenseList() {
           </div>
         </CardHeader>
         <CardContent className="pt-4">
+          {filteredSelectedIds.length > 0 && (
+            <div className="mb-4">
+              <BulkActionBar
+                count={filteredSelectedIds.length}
+                onClearSelection={() => setSelectedIds(new Set())}
+                onChangeCategory={() => setBulkCategoryOpen(true)}
+                onDelete={() => setBulkDeleteOpen(true)}
+              />
+            </div>
+          )}
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-[40px] px-2">
+                  <Checkbox
+                    checked={allSelected}
+                    onCheckedChange={handleSelectAll}
+                    aria-label="Select all"
+                  />
+                </TableHead>
                 <TableHead className="min-w-[120px]">Date</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead className="min-w-[140px]">Category</TableHead>
@@ -107,7 +193,7 @@ export function ExpenseList() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={4}>
+                  <TableCell colSpan={5}>
                     <div className="flex min-h-40 items-center justify-center text-muted-foreground">
                       <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
                     </div>
@@ -115,7 +201,7 @@ export function ExpenseList() {
                 </TableRow>
               ) : filteredExpenses.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4}>
+                  <TableCell colSpan={5}>
                     <div className="flex min-h-40 items-center justify-center text-muted-foreground">
                       <p className="text-base">{getEmptyMessage()}</p>
                     </div>
@@ -136,11 +222,19 @@ export function ExpenseList() {
                     <>
                       <TableRow
                         key={expense.id}
+                        data-state={selectedIds.has(expense.id) ? "selected" : "unchecked"}
                         onContextMenu={(e) => {
                           e.preventDefault();
                           setContextMenuExpenseId(expense.id);
                         }}
                       >
+                        <TableCell className="px-2">
+                          <Checkbox
+                            checked={selectedIds.has(expense.id)}
+                            onCheckedChange={() => handleToggleSelect(expense.id)}
+                            aria-label="Select transaction"
+                          />
+                        </TableCell>
                         <TableCell className="font-medium">
                           {new Date(expense.date).toLocaleDateString()}
                         </TableCell>
@@ -249,7 +343,7 @@ export function ExpenseList() {
             </DialogHeader>
             <ReceiptUpload
               expenseId={uploadingExpenseId}
-              onUploadComplete={(data) => {
+              onUploadComplete={() => {
                 toast.success("Receipt uploaded successfully");
                 utils.expenses.invalidate();
                 setUploadingExpenseId(null);
@@ -270,6 +364,19 @@ export function ExpenseList() {
           }
         }}
         itemName={expenses.find((e) => e.id === expenseToDelete)?.description ?? "this transaction"}
+      />
+      <BulkDeleteDialog
+        open={bulkDeleteOpen}
+        count={filteredSelectedIds.length}
+        hasReceipts={hasReceiptsInSelection}
+        onConfirm={handleBulkDelete}
+        onClose={() => setBulkDeleteOpen(false)}
+      />
+      <BulkCategoryDialog
+        open={bulkCategoryOpen}
+        count={filteredSelectedIds.length}
+        onConfirm={handleBulkCategoryChange}
+        onClose={() => setBulkCategoryOpen(false)}
       />
     </>
   );
