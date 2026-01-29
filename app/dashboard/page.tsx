@@ -3,6 +3,9 @@ import { db } from "@/db";
 import { expense } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { eq, sql } from "drizzle-orm";
+import { MonthlyIncomeExpenseChart } from "@/components/dashboard/charts/monthly-income-expense-chart";
+import { CategoryBreakdownChart } from "@/components/dashboard/charts/category-breakdown-chart";
+import { BalanceTrendChart } from "@/components/dashboard/charts/balance-trend-chart";
 
 export default async function DashboardPage() {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -51,6 +54,13 @@ export default async function DashboardPage() {
           </p>
         </div>
       </div>
+
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-12">
+        <MonthlyIncomeExpenseChart />
+        <CategoryBreakdownChart />
+      </div>
+
+      <BalanceTrendChart />
     </>
   );
 }

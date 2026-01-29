@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, sql, gte } from "drizzle-orm";
 import { db } from "@/db";
 import { expense, category } from "@/db/schema";
 import { nanoid } from "nanoid";
@@ -320,5 +320,98 @@ export const expensesRouter = t.router({
         totalExpenses,
         netBalance: totalIncome - totalExpenses,
       };
+    }),
+
+  getMonthlyTotals: t.procedure
+    .query(async ({ ctx }) => {
+      if (!ctx.session) {
+        return [];
+      }
+
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
+      sixMonthsAgo.setDate(1);
+      sixMonthsAgo.setHours(0, 0, 0, 0);
+
+      const result = await db
+        .select({
+          month: sql<string>`DATE_TRUNC('month', ${expense.date})::text`,
+          type: expense.type,
+          total: sql<number>`CAST(SUM(${expense.amount}) AS NUMERIC)`,
+        })
+        .from(expense)
+        .where(and(eq(expense.userId, ctx.session.user.id), gte(expense.date, sixMonthsAgo)))
+        .groupBy(sql`DATE_TRUNC('month', ${expense.date})`, expense.type)
+        .orderBy(sql`DATE_TRUNC('month', ${expense.date})`);
+
+      const monthNames = [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+      ];
+
+      const monthlyData = result.reduce((acc, row) => {
+        const date = new Date(row.month);
+        const monthKey = monthNames[date.getMonth()];
+        const year = date.getFullYear();
+
+        const key = `${monthKey} ${year}`;
+        if (!acc[key]) {
+          acc[key] = { month: monthKey, income: 0, expense: 0 };
+        }
+
+        if (row.type === "income") {
+          acc[key].income = parseFloat(row.total.toString());
+        } else {
+          acc[key].expense = parseFloat(row.total.toString());
+        }
+
+        return acc;
+      }, {} as Record<string, { month: string; income: number; expense: number }>);
+
+      return Object.values(monthlyData);
+    }),
+
+  getCategoryBreakdown: t.procedure
+    .query(async ({ ctx }) => {
+      if (!ctx.session) {
+        return [];
+      }
+
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
+      sixMonthsAgo.setDate(1);
+      sixMonthsAgo.setHours(0, 0, 0, 0);
+
+      const result = await db
+        .select({
+          categoryId: expense.categoryId,
+          categoryName: category.name,
+          categoryColor: category.color,
+          total: sql<number>`CAST(SUM(${expense.amount}) AS NUMERIC)`,
+        })
+        .from(expense)
+        .leftJoin(category, eq(expense.categoryId, category.id))
+        .where(and(eq(expense.userId, ctx.session.user.id), eq(expense.type, "expense"), gte(expense.date, sixMonthsAgo)))
+        .groupBy(expense.categoryId, category.name, category.color)
+        .orderBy(desc(sql`SUM(${expense.amount})`));
+
+      return result.map((row) => ({
+        categoryId: row.categoryId || "uncategorized",
+        category: {
+          name: row.categoryName || "Uncategorized",
+          color: row.categoryColor || "#94a3b8",
+        },
+        total: parseFloat(row.total.toString()),
+      }));
     }),
 });
